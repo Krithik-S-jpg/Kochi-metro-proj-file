@@ -51,7 +51,7 @@ interface AppSettings {
     systemMaintenance: boolean;
     aiOptimizations: boolean;
     emailNotifications: boolean;
-    emailAddress?: string;
+    emailAddress: string;
     pushNotifications: boolean;
     soundEnabled: boolean;
   };
@@ -95,7 +95,7 @@ const defaultSettings: AppSettings = {
     emailNotifications: false,
     emailAddress: '',
     pushNotifications: true,
-    soundEnabled: true,
+    soundEnabled: true
   },
   display: {
     compactMode: false,
@@ -597,6 +597,66 @@ const Settings: React.FC<SettingsProps> = ({ darkMode, onDarkModeToggle }) => {
                     onCheckedChange={(checked) => updateSetting('notifications.aiOptimizations', checked)}
                   />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Email Notifications</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Receive scheduling conflicts via email
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.notifications.emailNotifications}
+                    onCheckedChange={(checked) => {
+                      console.log('Email Notifications Toggle:', checked);
+                      updateSetting('notifications.emailNotifications', checked);
+                      import('@/lib/emailService').then(({ setEmailConfig }) => {
+                        console.log('Current Email Address:', settings.notifications.emailAddress);
+
+                        if (!settings.notifications.emailAddress || !/.+@.+\..+/.test(settings.notifications.emailAddress)) {
+                          console.error('Invalid email address provided.');
+                          return;
+                        }
+
+                        setEmailConfig({
+                          enabled: checked,
+                          recipientEmail: settings.notifications.emailAddress
+                        });
+                      });
+                    }}
+                  />
+                </div>
+
+                {settings.notifications.emailNotifications && (
+                  <div className="flex flex-col space-y-2 mt-4">
+                    <Label className="text-base font-medium" htmlFor="notification-email">Email Address</Label>
+                    <Input
+                      id="notification-email"
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={settings.notifications.emailAddress}
+                      onChange={(e) => {
+                        const email = e.target.value;
+                        console.log('Email Address Input Changed:', email);
+                        updateSetting('notifications.emailAddress', email);
+                        import('@/lib/emailService').then(({ setEmailConfig }) => {
+                          if (!email || !/.+@.+\..+/.test(email)) {
+                            console.error('Invalid email address provided.');
+                            return;
+                          }
+
+                          setEmailConfig({
+                            enabled: settings.notifications.emailNotifications,
+                            recipientEmail: email
+                          });
+                        });
+                      }}
+                    />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Email address for receiving scheduling conflict notifications
+                    </p>
+                  </div>
+                )}
 
                 <Separator />
 

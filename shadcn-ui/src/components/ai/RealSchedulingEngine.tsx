@@ -21,6 +21,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { Train, Route, Schedule } from '@/types';
+import { sendConflictNotification } from '@/lib/emailService';
 
 interface OptimizationMetrics {
   efficiency: number;
@@ -160,6 +161,37 @@ const RealSchedulingEngine: React.FC<RealSchedulingEngineProps> = ({
             newMetrics.energyUsage = Math.max(75, prev.energyUsage - Math.random() * 0.5 * dataMultiplier);
             newMetrics.optimizationsApplied += Math.floor(dataMultiplier);
           } else if (eventType.type === 'conflict') {
+            // Send email notification for conflicts
+            fetch('http://localhost:5000/send-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: 'recipient@example.com', // Replace with dynamic recipient email
+                from: 'your_verified_sender@example.com', // Replace with your verified sender email
+                subject: 'Scheduling Conflict Alert',
+                text: `
+                  Type: Scheduling Conflict
+                  Description: ${newEvent.description}
+                  Timestamp: ${newEvent.timestamp}
+                  Affected Trains: ${(newEvent.description.match(/Train-\d+/g) || []).join(', ')}
+                `,
+              }),
+            })
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('Failed to send email');
+                }
+                return response.json();
+              })
+              .then(data => {
+                console.log('Email sent successfully:', data);
+              })
+              .catch(error => {
+                console.error('Error sending email:', error);
+              });
+            
             newMetrics.conflicts = Math.max(0, prev.conflicts - 1);
             newMetrics.efficiency = Math.min(95, prev.efficiency + Math.random() * 0.4 * dataMultiplier);
           } else if (eventType.type === 'adjustment') {
