@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface ParallaxLayer {
   src: string;
@@ -30,6 +30,20 @@ const ParallaxBackground: React.FC<ParallaxBackgroundProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<HTMLImageElement[]>([]);
+  const [clock, setClock] = useState('--:--:--');
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+      setClock(`${hours}:${minutes}:${seconds}`);
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Define the parallax layers with EXACT positioning from position.txt
   const layers: ParallaxLayer[] = [
@@ -208,12 +222,42 @@ const ParallaxBackground: React.FC<ParallaxBackgroundProps> = ({
         ))}
       </div>
       
-      {/* Content overlay */}
-      {children && (
-        <div className="relative" style={{ zIndex: 50 }}>
-          {children}
+      {/* Top Navigation Bar + Content overlay */}
+    <div className="fixed w-full top-0 left-0" style={{ zIndex: 100 }}>
+      <nav className="w-full bg-white/90 dark:bg-gray-900/90 shadow-md backdrop-blur-sm transition-colors duration-300">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center space-x-3 cursor-pointer select-none">
+              <img
+                src="https://s3-ap-south-1.amazonaws.com/kmrldata/wp-content/uploads/2022/08/12105259/KMRL-logo-300x165.gif"
+                alt="Kochi Metro Rail Limited Logo"
+                className="h-10 w-auto"
+              />
+            </div>
+            <div className="flex-1 text-center">
+              <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100 tracking-wide transition-colors duration-300">
+                Kochi Metro Rail Limited
+              </span>
+            </div>
+            <div className="flex items-center space-x-6">
+              <div>
+                <span className="font-orbitron text-lg bg-blue-800 text-blue-50 px-4 py-1 rounded-lg shadow min-w-[110px] text-center select-none transition-colors duration-300" style={{ letterSpacing: '0.15em' }}>{clock}</span>
+              </div>
+              <div>
+                <img 
+                  src="https://gad.kerala.gov.in/sites/default/files/inline-images/kerala%20final%20emblem_0.jpg" 
+                  alt="Kerala Govt Official Logo" 
+                  className="h-14 w-auto object-contain"
+                  title="Kerala Government Official"
+                  style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.2))' }}
+                />
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div style={{ marginTop: 90 }}>
         </div>
-      )}
+        {children}
+      </div>
     </>
   );
 };
