@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/Ui/select';
+import { Input } from '@/components/Ui/input';
+import { Label } from '@/components/Ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider';
+import { Slider } from '@/components/Ui/slider';
 import { 
   Settings as SettingsIcon, 
   Moon, 
@@ -50,6 +51,7 @@ interface AppSettings {
     systemMaintenance: boolean;
     aiOptimizations: boolean;
     emailNotifications: boolean;
+    emailAddress?: string;
     pushNotifications: boolean;
     soundEnabled: boolean;
   };
@@ -91,6 +93,7 @@ const defaultSettings: AppSettings = {
     systemMaintenance: true,
     aiOptimizations: true,
     emailNotifications: false,
+    emailAddress: '',
     pushNotifications: true,
     soundEnabled: true,
   },
@@ -124,6 +127,7 @@ const defaultSettings: AppSettings = {
 
 const Settings: React.FC<SettingsProps> = ({ darkMode, onDarkModeToggle }) => {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const { language, setLanguage } = useLanguage();
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -166,14 +170,15 @@ const Settings: React.FC<SettingsProps> = ({ darkMode, onDarkModeToggle }) => {
     const keys = path.split('.');
     const newSettings = { ...settings };
     let current: any = newSettings;
-    
     for (let i = 0; i < keys.length - 1; i++) {
       current = current[keys[i]];
     }
     current[keys[keys.length - 1]] = value;
-    
     setSettings(newSettings);
     setHasChanges(true);
+    if (path === 'language') {
+      setLanguage(value);
+    }
   };
 
   const saveSettings = async () => {
@@ -601,10 +606,28 @@ const Settings: React.FC<SettingsProps> = ({ darkMode, onDarkModeToggle }) => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Receive notifications via email
                     </p>
+                    {settings.notifications.emailNotifications && settings.notifications.emailAddress && (
+                      <span className="text-xs text-blue-600">{settings.notifications.emailAddress}</span>
+                    )}
                   </div>
                   <Switch
                     checked={settings.notifications.emailNotifications}
-                    onCheckedChange={(checked) => updateSetting('notifications.emailNotifications', checked)}
+                    onCheckedChange={async (checked) => {
+                      if (checked) {
+                        const email = prompt("Enter your email to receive notifications:");
+                        if (email && email.trim() !== "") {
+                          updateSetting('notifications.emailNotifications', true);
+                          updateSetting('notifications.emailAddress', email.trim());
+                          alert(`Email saved: ${email.trim()}`);
+                        } else {
+                          alert("Email is required to enable notifications.");
+                          updateSetting('notifications.emailNotifications', false);
+                        }
+                      } else {
+                        updateSetting('notifications.emailNotifications', false);
+                        updateSetting('notifications.emailAddress', '');
+                      }
+                    }}
                   />
                 </div>
 
@@ -943,7 +966,7 @@ const Settings: React.FC<SettingsProps> = ({ darkMode, onDarkModeToggle }) => {
                     </p>
                   </div>
                   <Select
-                    value={settings.language}
+                    value={language}
                     onValueChange={(value) => updateSetting('language', value)}
                   >
                     <SelectTrigger className="w-40">

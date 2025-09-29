@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
+import { translations } from '../lib/translations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +40,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 
 export default function Index() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const { language } = useLanguage();
   const [trains, setTrains] = useState<TrainType[]>([]);
   const [routes, setRoutes] = useState<RouteType[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -65,7 +68,13 @@ export default function Index() {
       await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second loading
       
       setTrains(sampleTrains);
-      setRoutes(sampleRoutes);
+      // Translate station names in routes
+      setRoutes(sampleRoutes.map(route => ({
+        ...route,
+        stations: route.stations.map(station => translations[language][station] || station),
+        startStation: translations[language][route.startStation] || route.startStation,
+        endStation: translations[language][route.endStation] || route.endStation,
+      })));
       setSchedules(generateSampleSchedules());
       
       // Convert KPIMetrics to KPI array format
@@ -120,9 +129,9 @@ export default function Index() {
         }
       ];
       
-      setKpis(kpiArray);
-      setIsInitialLoading(false);
-      setLastRefresh(new Date());
+  setKpis(kpiArray);
+  setIsInitialLoading(false);
+  setLastRefresh(new Date());
     };
 
     loadInitialData();
