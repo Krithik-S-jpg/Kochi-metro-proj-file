@@ -64,6 +64,7 @@ interface LiveTrain {
   nextStation: string;
   status: 'running' | 'stopped' | 'delayed' | 'maintenance';
   aiOptimized: boolean;
+  dwellTime?: number;
 }
 
 // Real KMRL Blue Line stations with accurate coordinates
@@ -384,12 +385,14 @@ const createTrainIcon = (aiOptimized: boolean, status: string, isUploaded: boole
   });
 };
 
-// Component to animate trains along the route
 const AnimatedTrains: React.FC<{ trains: LiveTrain[]; uploadedTrains: TrainType[] }> = ({ trains, uploadedTrains }) => {
   const map = useMap();
+  const trainMarkersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
-    const trainMarkers: L.Marker[] = [];
+    // Clear existing markers
+    trainMarkersRef.current.forEach(marker => map.removeLayer(marker));
+    trainMarkersRef.current = [];
 
     // Add live trains
     trains.forEach((train) => {
@@ -401,7 +404,7 @@ const AnimatedTrains: React.FC<{ trains: LiveTrain[]; uploadedTrains: TrainType[
         <div style="min-width: 220px; font-family: system-ui;">
           <h3 style="margin: 0 0 12px 0; color: #1f2937; font-weight: 600; font-size: 16px;">${train.name}</h3>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 12px;">
-            <div><strong>Speed:</strong> ${train.speed} km/h</div>
+            <div><strong>Speed:</strong> ${train.speed.toFixed(0)} km/h</div>
             <div><strong>Load:</strong> ${train.passengerLoad}%</div>
             <div><strong>Status:</strong> <span style="color: ${train.status === 'running' ? '#10b981' : train.status === 'stopped' ? '#f59e0b' : '#ef4444'}">${train.status}</span></div>
             <div><strong>Next:</strong> ${train.nextStation}</div>
@@ -418,26 +421,23 @@ const AnimatedTrains: React.FC<{ trains: LiveTrain[]; uploadedTrains: TrainType[
         </div>
       `);
 
-      trainMarkers.push(marker);
+      trainMarkersRef.current.push(marker);
     });
 
     // Add uploaded trains (if they have coordinates)
     uploadedTrains.forEach((train) => {
-      // Try to extract coordinates from currentLocation or other fields
       let coordinates: [number, number] | null = null;
       
       if (train.currentLocation && typeof train.currentLocation === 'string') {
-        // Try to parse coordinates from currentLocation
         const coordMatch = train.currentLocation.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
         if (coordMatch) {
           coordinates = [parseFloat(coordMatch[1]), parseFloat(coordMatch[2])];
         }
       }
       
-      // If no coordinates found, place randomly around KMRL area
       if (!coordinates) {
         coordinates = [
-          10.0258 + (Math.random() - 0.5) * 0.2, // Around Edapally
+          10.0258 + (Math.random() - 0.5) * 0.2,
           76.3078 + (Math.random() - 0.5) * 0.2
         ];
       }
@@ -461,11 +461,12 @@ const AnimatedTrains: React.FC<{ trains: LiveTrain[]; uploadedTrains: TrainType[
         </div>
       `);
 
-      trainMarkers.push(marker);
+      trainMarkersRef.current.push(marker);
     });
 
     return () => {
-      trainMarkers.forEach(marker => map.removeLayer(marker));
+      trainMarkersRef.current.forEach(marker => map.removeLayer(marker));
+      trainMarkersRef.current = [];
     };
   }, [trains, uploadedTrains, map]);
 
@@ -552,29 +553,27 @@ const RealMap: React.FC<RealMapProps> = ({
     }
   });
 
-  // Real-time train movement simulation
+  // Enhanced real-time train movement simulation
   useEffect(() => {
     if (!isAIActive) return;
 
     const interval = setInterval(() => {
-      setLiveTrains(prevTrains => 
+      setLiveTrains(prevTrains =>
         prevTrains.map(train => {
+          // If train is stopped for a bit (dwell time), count down
+          if (train.status === 'stopped' && train.dwellTime && train.dwellTime > 0) {
+            return { ...train, dwellTime: train.dwellTime - 1 };
+          }
+          // If dwell time is over, start running again
+          if (train.status === 'stopped' && train.dwellTime === 0) {
+            return { ...train, status: 'running' };
+          }
+          // Don't move trains that aren't running
           if (train.status !== 'running') return train;
 
-          // Find current station index
-          const currentStationIndex = kmrlStations.findIndex(station => 
-            Math.abs(station.coordinates[0] - train.coordinates[0]) < 0.01 &&
-            Math.abs(station.coordinates[1] - train.coordinates[1]) < 0.01
-          );
-
-          let nextStationIndex;
-          if (train.direction === 'aluva_to_maharajas') {
-            nextStationIndex = currentStationIndex >= 0 ? currentStationIndex + 1 : 0;
-            if (nextStationIndex >= kmrlStations.length) nextStationIndex = 0;
-          } else {
-            nextStationIndex = currentStationIndex >= 0 ? currentStationIndex - 1 : kmrlStations.length - 1;
-            if (nextStationIndex < 0) nextStationIndex = kmrlStations.length - 1;
-          }
+          // Find the index of the next station
+          const nextStationIndex = kmrlStations.findIndex(s => s.name === train.nextStation);
+          if (nextStationIndex === -1) return train; // Invalid next station
 
           const targetStation = kmrlStations[nextStationIndex];
           const currentLat = train.coordinates[0];
@@ -583,18 +582,26 @@ const RealMap: React.FC<RealMapProps> = ({
           const targetLng = targetStation.coordinates[1];
 
           // Move train towards target station
-          const speed = 0.0005; // Adjust movement speed
+          const speed = 0.0005 + (Math.random() - 0.5) * 0.0001; // Variable speed
           const latDiff = targetLat - currentLat;
           const lngDiff = targetLng - currentLng;
           const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
 
+          // When train reaches a station
           if (distance < 0.001) {
-            // Reached station, move to next
+            const newStatus = Math.random() < 0.05 ? 'delayed' : 'stopped'; // 5% chance of delay
+            const nextIdx = train.direction === 'aluva_to_maharajas'
+              ? (nextStationIndex + 1) % kmrlStations.length
+              : (nextStationIndex - 1 + kmrlStations.length) % kmrlStations.length;
+
             return {
               ...train,
               coordinates: targetStation.coordinates,
-              nextStation: kmrlStations[(nextStationIndex + (train.direction === 'aluva_to_maharajas' ? 1 : -1) + kmrlStations.length) % kmrlStations.length].name,
-              aiOptimized: true
+              status: newStatus,
+              dwellTime: newStatus === 'stopped' ? 5 : undefined, // Stop for 5 ticks (10s)
+              nextStation: kmrlStations[nextIdx].name,
+              passengerLoad: Math.max(20, Math.min(95, train.passengerLoad + Math.floor(Math.random() * 21) - 10)), // Fluctuate passenger load
+              aiOptimized: Math.random() < 0.8 // 80% chance of being AI optimized
             };
           }
 
@@ -604,7 +611,7 @@ const RealMap: React.FC<RealMapProps> = ({
           return {
             ...train,
             coordinates: [newLat, newLng] as [number, number],
-            speed: Math.max(35, Math.min(55, train.speed + (Math.random() - 0.5) * 3))
+            speed: Math.max(35, Math.min(65, train.speed + (Math.random() - 0.5) * 5)) // More speed variation
           };
         })
       );
@@ -813,36 +820,62 @@ const RealMap: React.FC<RealMapProps> = ({
                   }}
                 >
                   <Popup>
-                    <div style={{ minWidth: '280px', fontFamily: 'system-ui' }}>
-                      <h3 style={{ margin: '0 0 12px 0', color: '#1f2937', fontWeight: '600', fontSize: '18px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>
-                        {station.name}
-                      </h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '12px' }}>
-                        <div><strong>Type:</strong> <span style={{ textTransform: 'capitalize', color: station.type === 'terminal' ? '#ef4444' : station.type === 'interchange' ? '#3b82f6' : '#10b981' }}>{station.type}</span></div>
-                        <div><strong>Status:</strong> <span style={{ color: station.status === 'operational' ? '#10b981' : '#6b7280' }}>{station.status}</span></div>
-                        <div><strong>Passengers:</strong> <span style={{ fontWeight: '600' }}>{station.realTimeData.passengerCount}</span></div>
-                        <div><strong>Wait Time:</strong> <span style={{ color: station.realTimeData.waitingTime <= 2 ? '#10b981' : station.realTimeData.waitingTime <= 4 ? '#f59e0b' : '#ef4444' }}>{station.realTimeData.waitingTime}min</span></div>
-                        <div><strong>Last Arrival:</strong> {station.realTimeData.lastTrainArrival}</div>
-                        <div><strong>Next ETA:</strong> <span style={{ color: '#10b981', fontWeight: '600' }}>{station.realTimeData.nextTrainETA}</span></div>
-                      </div>
-                      <div style={{ 
-                        padding: '8px 12px', 
-                        borderRadius: '8px', 
-                        fontSize: '12px', 
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        color: station.realTimeData.crowdLevel === 'high' ? '#dc2626' : 
-                               station.realTimeData.crowdLevel === 'medium' ? '#d97706' : '#16a34a',
-                        backgroundColor: station.realTimeData.crowdLevel === 'high' ? '#fef2f2' : 
-                                        station.realTimeData.crowdLevel === 'medium' ? '#fefbf2' : '#f0fdf4',
-                        border: `1px solid ${station.realTimeData.crowdLevel === 'high' ? '#fecaca' : 
-                                             station.realTimeData.crowdLevel === 'medium' ? '#fed7aa' : '#bbf7d0'}`
-                      }}>
-                        {station.realTimeData.crowdLevel} Crowd Level
-                      </div>
-                    </div>
+                    <Tabs defaultValue="details" className="w-[300px] p-1">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="departures">Departures</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="details">
+                        <div style={{ fontFamily: 'system-ui' }}>
+                          <h3 style={{ margin: '0 0 12px 0', color: '#1f2937', fontWeight: '600', fontSize: '18px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>
+                            {station.name}
+                          </h3>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '12px' }}>
+                            <div><strong>Type:</strong> <span style={{ textTransform: 'capitalize', color: station.type === 'terminal' ? '#ef4444' : station.type === 'interchange' ? '#3b82f6' : '#10b981' }}>{station.type}</span></div>
+                            <div><strong>Status:</strong> <span style={{ color: station.status === 'operational' ? '#10b981' : '#6b7280' }}>{station.status}</span></div>
+                            <div><strong>Passengers:</strong> <span style={{ fontWeight: '600' }}>{station.realTimeData.passengerCount}</span></div>
+                            <div><strong>Wait Time:</strong> <span style={{ color: station.realTimeData.waitingTime <= 2 ? '#10b981' : station.realTimeData.waitingTime <= 4 ? '#f59e0b' : '#ef4444' }}>{station.realTimeData.waitingTime}min</span></div>
+                            <div><strong>Last Arrival:</strong> {station.realTimeData.lastTrainArrival}</div>
+                            <div><strong>Next ETA:</strong> <span style={{ color: '#10b981', fontWeight: '600' }}>{station.realTimeData.nextTrainETA}</span></div>
+                          </div>
+                          <div style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            textAlign: 'center',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            color: station.realTimeData.crowdLevel === 'high' ? '#dc2626' :
+                                   station.realTimeData.crowdLevel === 'medium' ? '#d97706' : '#16a34a',
+                            backgroundColor: station.realTimeData.crowdLevel === 'high' ? '#fef2f2' :
+                                            station.realTimeData.crowdLevel === 'medium' ? '#fefbf2' : '#f0fdf4',
+                            border: `1px solid ${station.realTimeData.crowdLevel === 'high' ? '#fecaca' :
+                                                 station.realTimeData.crowdLevel === 'medium' ? '#fed7aa' : '#bbf7d0'}`
+                          }}>
+                            {station.realTimeData.crowdLevel} Crowd Level
+                          </div>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="departures">
+                        <div style={{ fontFamily: 'system-ui' }}>
+                          <h3 style={{ margin: '0 0 12px 0', color: '#1f2937', fontWeight: '600', fontSize: '18px', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px' }}>
+                            Live Departures
+                          </h3>
+                          <div className="space-y-2 text-sm">
+                            {[...Array(4)].map((_, i) => {
+                              const waitTime = Math.floor(Math.random() * 10) + i * 2 + 2;
+                              return (
+                                <div key={i} className="flex justify-between">
+                                  <span>{i % 2 === 0 ? 'Aluva' : 'Maharajas'}</span>
+                                  <span className={`font-bold ${waitTime < 5 ? 'text-green-600' : 'text-yellow-600'}`}>{waitTime} min</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </Popup>
                 </Marker>
               ))}
