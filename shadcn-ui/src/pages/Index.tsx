@@ -34,6 +34,7 @@ import RealMap from '@/components/map/RealMap';
 import Settings from '@/pages/Settings';
 import ParallaxWrapper from '@/components/ui/parallax/ParallaxWrapper';
 import ScrollToggleButton from '@/components/ui/scroll-toggle-button';
+import ScheduleComparison from '@/components/dashboard/ScheduleComparison';
 import { Train as TrainType, Route as RouteType, Schedule, KPI } from '@/types';
 import { sampleTrains, sampleRoutes, generateSampleSchedules, sampleKPIMetrics } from '@/lib/sampleData';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -44,6 +45,7 @@ export default function Index() {
   const [trains, setTrains] = useState<TrainType[]>([]);
   const [routes, setRoutes] = useState<RouteType[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [originalSchedules, setOriginalSchedules] = useState<Schedule[]>([]);
   const [stations, setStations] = useState<any[]>([]);
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [hasUploadedData, setHasUploadedData] = useState(false);
@@ -60,6 +62,7 @@ export default function Index() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [showComparison, setShowComparison] = useState(false);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
   useEffect(() => {
@@ -75,7 +78,9 @@ export default function Index() {
         startStation: translations[language][route.startStation] || route.startStation,
         endStation: translations[language][route.endStation] || route.endStation,
       })));
-      setSchedules(generateSampleSchedules());
+      const initialSchedules = generateSampleSchedules();
+      setSchedules(initialSchedules);
+      setOriginalSchedules(initialSchedules);
       
       // Convert KPIMetrics to KPI array format
       const kpiArray: KPI[] = [
@@ -159,7 +164,9 @@ export default function Index() {
     
     if (uploadedData.schedules && Array.isArray(uploadedData.schedules) && uploadedData.schedules.length > 0) {
       console.log(`Processing ${uploadedData.schedules.length} schedules`);
-      setSchedules([...generateSampleSchedules(), ...uploadedData.schedules]); // Keep sample + add all uploaded
+      const newSchedules = [...generateSampleSchedules(), ...uploadedData.schedules];
+      setSchedules(newSchedules);
+      setOriginalSchedules(newSchedules);
     }
 
     if (uploadedData.stations && Array.isArray(uploadedData.stations) && uploadedData.stations.length > 0) {
@@ -668,110 +675,119 @@ export default function Index() {
                         </p>
                       </div>
                       {predictionResults && (
-                        <Badge variant="default" className="bg-green-600">
-                          AI Optimized
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" onClick={() => setShowComparison(!showComparison)}>
+                            {showComparison ? 'Hide Comparison' : 'Compare with Original'}
+                          </Button>
+                          <Badge variant="default" className="bg-green-600">
+                            AI Optimized
+                          </Badge>
+                        </div>
                       )}
                     </div>
                     
-                    <Card className="dark:bg-gray-800/90 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="dark:text-white">Schedule Overview</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {!Array.isArray(schedules) || schedules.length === 0 ? (
-                          <div className="text-center py-8">
-                            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No schedules available</p>
-                            <p className="text-gray-500 dark:text-gray-500">Upload data to view train schedules</p>
-                            <Button 
-                              variant="outline" 
-                              className="mt-4"
-                              onClick={() => {
-                                setActiveTab('upload');
-                                setCurrentPage('upload');
-                              }}
-                            >
-                              Upload Data
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                              <div className="text-center p-4 bg-blue-50/90 dark:bg-blue-900/20 rounded-lg backdrop-blur-sm">
-                                <div className="text-2xl font-bold text-blue-600">{schedules.length}</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">Total Schedules</div>
-                                {hasUploadedData && uploadedDataStats && uploadedDataStats.schedules > 0 && (
-                                  <div className="text-xs text-blue-600 mt-1">+{uploadedDataStats.schedules} uploaded</div>
+                    {showComparison ? (
+                      <ScheduleComparison originalSchedules={originalSchedules} optimizedSchedules={schedules} />
+                    ) : (
+                      <Card className="dark:bg-gray-800/90 backdrop-blur-sm">
+                        <CardHeader>
+                          <CardTitle className="dark:text-white">Schedule Overview</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {!Array.isArray(schedules) || schedules.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                              <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No schedules available</p>
+                              <p className="text-gray-500 dark:text-gray-500">Upload data to view train schedules</p>
+                              <Button
+                                variant="outline"
+                                className="mt-4"
+                                onClick={() => {
+                                  setActiveTab('upload');
+                                  setCurrentPage('upload');
+                                }}
+                              >
+                                Upload Data
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div className="text-center p-4 bg-blue-50/90 dark:bg-blue-900/20 rounded-lg backdrop-blur-sm">
+                                  <div className="text-2xl font-bold text-blue-600">{schedules.length}</div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Schedules</div>
+                                  {hasUploadedData && uploadedDataStats && uploadedDataStats.schedules > 0 && (
+                                    <div className="text-xs text-blue-600 mt-1">+{uploadedDataStats.schedules} uploaded</div>
+                                  )}
+                                </div>
+                                <div className="text-center p-4 bg-green-50/90 dark:bg-green-900/20 rounded-lg backdrop-blur-sm">
+                                  <div className="text-2xl font-bold text-green-600">
+                                    {schedules.filter(s => s.status === 'scheduled').length}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">Active Schedules</div>
+                                </div>
+                                <div className="text-center p-4 bg-purple-50/90 dark:bg-purple-900/20 rounded-lg backdrop-blur-sm">
+                                  <div className="text-2xl font-bold text-purple-600">
+                                    {schedules.length > 0
+                                      ? Math.round(schedules.reduce((sum, s) => sum + (s.frequency || 0), 0) / schedules.length)
+                                      : 0
+                                    }min
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">Avg. Frequency</div>
+                                </div>
+                              </div>
+
+                              <div className="max-h-96 overflow-auto bg-white/50 dark:bg-gray-900/50 rounded-lg backdrop-blur-sm">
+                                <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
+                                  <thead className="bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-sm">
+                                    <tr>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Schedule ID</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Train</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Route</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Departure</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Arrival</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Frequency</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Load</th>
+                                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {schedules.slice(0, 50).map((schedule) => (
+                                      <tr key={schedule.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 backdrop-blur-sm">
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.id}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.trainId}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.routeId}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.departureTime}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.arrivalTime}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.frequency}min</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.passengerLoad}</td>
+                                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-2">
+                                          <Badge
+                                            variant={schedule.status === 'scheduled' ? 'default' : 'secondary'}
+                                          >
+                                            {schedule.status}
+                                          </Badge>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                                {schedules.length > 50 && (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                    Showing first 50 of {schedules.length} schedules
+                                    {hasUploadedData && uploadedDataStats && (
+                                      <span className="ml-2 text-blue-600">
+                                        ({uploadedDataStats.schedules} from uploaded data)
+                                      </span>
+                                    )}
+                                  </p>
                                 )}
                               </div>
-                              <div className="text-center p-4 bg-green-50/90 dark:bg-green-900/20 rounded-lg backdrop-blur-sm">
-                                <div className="text-2xl font-bold text-green-600">
-                                  {schedules.filter(s => s.status === 'scheduled').length}
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">Active Schedules</div>
-                              </div>
-                              <div className="text-center p-4 bg-purple-50/90 dark:bg-purple-900/20 rounded-lg backdrop-blur-sm">
-                                <div className="text-2xl font-bold text-purple-600">
-                                  {schedules.length > 0 
-                                    ? Math.round(schedules.reduce((sum, s) => sum + (s.frequency || 0), 0) / schedules.length)
-                                    : 0
-                                  }min
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">Avg. Frequency</div>
-                              </div>
                             </div>
-                            
-                            <div className="max-h-96 overflow-auto bg-white/50 dark:bg-gray-900/50 rounded-lg backdrop-blur-sm">
-                              <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
-                                <thead className="bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-sm">
-                                  <tr>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Schedule ID</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Train</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Route</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Departure</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Arrival</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Frequency</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Load</th>
-                                    <th className="border border-gray-200 dark:border-gray-700 px-4 py-2 text-left dark:text-white">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {schedules.slice(0, 50).map((schedule) => (
-                                    <tr key={schedule.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 backdrop-blur-sm">
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.id}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.trainId}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.routeId}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.departureTime}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.arrivalTime}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.frequency}min</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2 dark:text-gray-300">{schedule.passengerLoad}</td>
-                                      <td className="border border-gray-200 dark:border-gray-700 px-4 py-2">
-                                        <Badge 
-                                          variant={schedule.status === 'scheduled' ? 'default' : 'secondary'}
-                                        >
-                                          {schedule.status}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                              {schedules.length > 50 && (
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                                  Showing first 50 of {schedules.length} schedules
-                                  {hasUploadedData && uploadedDataStats && (
-                                    <span className="ml-2 text-blue-600">
-                                      ({uploadedDataStats.schedules} from uploaded data)
-                                    </span>
-                                  )}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
                   </TabsContent>
                 </Tabs>
               </div>
