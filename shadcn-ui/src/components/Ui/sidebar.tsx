@@ -92,6 +92,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       label: 'Schedules',
       icon: Clock,
       description: 'View train schedules'
+    },
+    {
+      id: 'chatbot',
+      label: 'AI Chatbot',
+      icon: Activity,
+      description: 'Interact with the AI Chatbot'
     }
   ];
 

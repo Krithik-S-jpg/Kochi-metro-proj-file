@@ -19,4 +19,28 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173, // Explicitly define the port
   },
+  build: {
+    outDir: "dist",
+    sourcemap: false,
+    minify: "terser",
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Split vendor dependencies into separate chunks
+          if (id.includes("node_modules")) {
+            if (id.includes("@sendgrid")) {
+              return "sendgrid";
+            }
+            if (id.includes("react") || id.includes("react-dom")) {
+              return "react-vendor";
+            }
+            if (id.includes("@radix-ui")) {
+              return "radix-ui";
+            }
+          }
+        },
+      },
+    },
+  },
 }));

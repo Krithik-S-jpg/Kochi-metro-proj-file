@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as MenubarPrimitive from '@radix-ui/react-menubar';
 import { Check, ChevronRight, Circle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 
@@ -92,7 +93,11 @@ const MenubarContent = React.forwardRef<
         className
       )}
       {...props}
-    />
+    >
+      <Link to="/chatbot" className="menu-item">
+        AI Chatbot
+      </Link>
+    </MenubarPrimitive.Content>
   </MenubarPrimitive.Portal>
 ));
 MenubarContent.displayName = MenubarPrimitive.Content.displayName;
