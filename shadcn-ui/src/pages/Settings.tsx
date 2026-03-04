@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Ui/card';
+import { Button } from '@/components/Ui/button';
+import { Switch } from '@/components/Ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/Ui/select';
 import { Input } from '@/components/Ui/input';
 import { Label } from '@/components/Ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/Ui/separator';
+import { Badge } from '@/components/Ui/badge';
+import { Alert, AlertDescription } from '@/components/Ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Ui/tabs';
 import { Slider } from '@/components/Ui/slider';
 import { 
   Settings as SettingsIcon, 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/Ui/card';
+import { Button } from '@/components/Ui/button';
+import { Badge } from '@/components/Ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Ui/tabs';
 import { 
   MapPin, 
   Train, 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { translations } from '../lib/translations';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/Ui/card';
+import { Badge } from '@/components/Ui/badge';
+import { Button } from '@/components/Ui/button';
+import { Alert, AlertDescription } from '@/components/Ui/alert';
 import { 
   Train, 
   Users, 
@@ -26,14 +26,14 @@ import KPIDashboard from '@/components/dashboard/KPIDashboard';
 import FileUpload from '@/components/data/FileUpload';
 import PredictionEngine from '@/components/ai/PredictionEngine';
 import RealSchedulingEngine from '@/components/ai/RealSchedulingEngine';
-import UploadModal from '@/components/ui/upload-modal';
-import LoadingScreen from '@/components/ui/loading-screen';
-import DataLoading from '@/components/ui/data-loading';
-import Sidebar from '@/components/ui/sidebar';
+import UploadModal from '@/components/Ui/upload-modal';
+import LoadingScreen from '@/components/Ui/loading-screen';
+import DataLoading from '@/components/Ui/data-loading';
+import Sidebar from '@/components/Ui/sidebar';
 import RealMap from '@/components/map/RealMap';
 import Settings from '@/pages/Settings';
-import ParallaxWrapper from '@/components/ui/parallax/ParallaxWrapper';
-import ScrollToggleButton from '@/components/ui/scroll-toggle-button';
+import ParallaxWrapper from '@/components/Ui/parallax/ParallaxWrapper';
+import ScrollToggleButton from '@/components/Ui/scroll-toggle-button';
 import { Train as TrainType, Route as RouteType, Schedule, KPI } from '@/types';
 import { sampleTrains, sampleRoutes, generateSampleSchedules, sampleKPIMetrics } from '@/lib/sampleData';
 import { useDarkMode } from '@/hooks/useDarkMode';

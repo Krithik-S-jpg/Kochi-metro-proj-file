@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/Ui/card';
+import { Button } from '@/components/Ui/button';
+import { Badge } from '@/components/Ui/badge';
+import { Switch } from '@/components/Ui/switch';
+import { Separator } from '@/components/Ui/separator';
 import { 
   Map, 
   Settings, 
@@ -92,6 +92,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       label: 'Schedules',
       icon: Clock,
       description: 'View train schedules'
+    },
+    {
+      id: 'chatbot',
+      label: 'AI Chatbot',
+      icon: Activity,
+      description: 'Interact with the AI Chatbot'
     }
   ];
 
