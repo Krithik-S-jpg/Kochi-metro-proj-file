@@ -1,9 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/Ui/dialog';
+import { Button } from '@/components/Ui/button';
+import { Progress } from '@/components/Ui/progress';
+import { Alert, AlertDescription } from '@/components/Ui/alert';
+import { Badge } from '@/components/Ui/badge';
 import { Upload, FileText, X, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
